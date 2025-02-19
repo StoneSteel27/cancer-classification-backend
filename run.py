@@ -1,4 +1,5 @@
 import os
+from dotenv import load_dotenv
 from flask import Flask
 from flask_cors import CORS
 from backend.config.production import ProductionConfig
@@ -9,6 +10,9 @@ from backend.routes.profile_routes import profile_bp
 from backend.error_handlers import errors
 import logging
 from logging.handlers import RotatingFileHandler
+
+# Load environment variables from .env file
+load_dotenv()
 
 
 def create_app(config_class=ProductionConfig):
@@ -31,7 +35,7 @@ def create_app(config_class=ProductionConfig):
     # Configure CORS for production
     CORS(app, resources={
         r"/*": {
-            "origins": ["https://.com"],
+            "origins": [os.getenv('FRONTEND_URL', 'http://localhost:3000')],
             "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
             "allow_headers": ["Content-Type", "Authorization"],
             "expose_headers": ["Content-Range", "X-Content-Range"],
@@ -69,5 +73,4 @@ def create_app(config_class=ProductionConfig):
 app = create_app()
 
 if __name__ == '__main__':
-    # In production, you'll typically use a WSGI server like gunicorn
     app.run(host='0.0.0.0', port=5000)

@@ -1,73 +1,48 @@
-import pickle
-import os.path
-from googleapiclient.discovery import build
-from google_auth_oauthlib.flow import InstalledAppFlow
-from google.auth.transport.requests import Request
-from email.mime.text import MIMEText
-import base64
+from mailjet_rest import Client
 from flask import current_app
 import logging
 from datetime import datetime
+import os
 
 
 class EmailService:
-    SCOPES = ['https://www.googleapis.com/auth/gmail.send']
-    _service = None
+    _client = None
 
     @classmethod
-    def get_gmail_service(cls):
-        """Gets or creates Gmail API service."""
+    def get_mailjet_client(cls):
+        """Gets or creates Mailjet API client."""
         try:
-            if cls._service:
-                return cls._service
-
-            creds = None
-            token_file = current_app.config['GMAIL_TOKEN_FILE']
-
-            if os.path.exists(token_file):
-                with open(token_file, 'rb') as token:
-                    creds = pickle.load(token)
-
-            if not creds or not creds.valid:
-                if creds and creds.expired and creds.refresh_token:
-                    creds.refresh(Request())
-                else:
-                    flow = InstalledAppFlow.from_client_secrets_file(
-                        current_app.config['GMAIL_CREDENTIALS_FILE'],
-                        cls.SCOPES
-                    )
-                    creds = flow.run_local_server(port=8080)
-
-                with open(token_file, 'wb') as token:
-                    pickle.dump(creds, token)
-
-            cls._service = build('gmail', 'v1', credentials=creds)
-            return cls._service
+            if cls._client is None:
+                api_key = os.getenv('MAILJET_API_KEY', '2594ee509bf6648d23b787d9e243ff70')
+                api_secret = os.getenv('MAILJET_API_SECRET', '85e083588e5b5fe4433821777a84c94a')
+                cls._client = Client(auth=(api_key, api_secret))
+            return cls._client
         except Exception as e:
-            logging.error(f"Failed to initialize Gmail service: {str(e)}")
+            logging.error(f"Failed to initialize Mailjet client: {str(e)}")
             raise
 
     @classmethod
-    def create_message(cls, to, subject, message_text):
-        """Create a message for an email."""
-        message = MIMEText(message_text, 'html')
-        message['to'] = to
-        message['from'] = current_app.config['GMAIL_SENDER']
-        message['subject'] = subject
-        return {'raw': base64.urlsafe_b64encode(message.as_bytes()).decode()}
-
-    @classmethod
-    def send_message(cls, to, subject, message_text):
-        """Send an email message."""
+    def send_message(cls, to, subject, html_content):
+        """Send an email message using Mailjet."""
         try:
-            service = cls.get_gmail_service()
-            message = cls.create_message(to, subject, message_text)
-            sent_message = service.users().messages().send(
-                userId='me',
-                body=message
-            ).execute()
-            logging.info(f"Message Id: {sent_message['id']}")
-            return True
+            client = cls.get_mailjet_client()
+            data = {
+                'FromEmail': os.getenv('MAILJET_SENDER', 'contactdrsuzane@gmail.com'),
+                'FromName': "Dr. Suzane's Cancer Classification System",
+                'Subject': subject,
+                'Html-part': html_content,
+                'Recipients': [{'Email': to}]
+            }
+
+            result = client.send.create(data=data)
+
+            if result.status_code == 200:
+                logging.info(f"Email sent successfully to {to}")
+                return True
+            else:
+                logging.error(f"Failed to send email: {result.json()}")
+                return False
+
         except Exception as e:
             logging.error(f"Failed to send email: {str(e)}")
             return False
@@ -120,30 +95,6 @@ class EmailService:
                             </div>
                         </div>
 
-                        <!-- Features Section -->
-                        <div style="margin-top: 30px; padding: 20px; background-color: #fff;">
-                            <h3 style="color: #333; margin-bottom: 15px;">What You Can Do With Our Platform:</h3>
-                            <ul style="color: #666; line-height: 1.6; padding-left: 20px;">
-                                <li>Upload and analyze medical images</li>
-                                <li>Get instant classification results</li>
-                                <li>Track your prediction history</li>
-                                <li>Access detailed analysis reports</li>
-                            </ul>
-                        </div>
-
-                        <!-- Security Notice -->
-                        <div style="margin-top: 30px; padding: 15px; background-color: #fff4e5; border-radius: 5px;">
-                            <p style="color: #666; font-size: 14px; margin: 0;">
-                                <strong>Important Security Notice:</strong>
-                                <br>
-                                • This verification link will expire in 24 hours
-                                <br>
-                                • If you didn't create this account, please ignore this email
-                                <br>
-                                • Never share your login credentials with anyone
-                            </p>
-                        </div>
-
                         <!-- Footer -->
                         <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
                             <p style="color: #999; font-size: 12px;">
@@ -160,12 +111,11 @@ class EmailService:
             return cls.send_message(
                 to=email,
                 subject="Verify Your Email - Cancer Classification System",
-                message_text=html_body
+                html_content=html_body
             )
 
-
         except Exception as e:
-            logging.error(f"Error sending password reset email to {email}: {str(e)}")
+            logging.error(f"Error sending verification email to {email}: {str(e)}")
             return False
 
     @classmethod
@@ -212,7 +162,7 @@ class EmailService:
             return cls.send_message(
                 to=email,
                 subject="Reset Your Password - Cancer Classification System",
-                message_text=html_body
+                html_content=html_body
             )
 
         except Exception as e:

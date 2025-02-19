@@ -115,7 +115,7 @@ def login():
             token,
             httponly=True,
             secure=True,
-            samesite='Strict',
+            samesite='None',
             max_age=3600
         )
 
@@ -228,7 +228,7 @@ def logout():
                            path='/',
                            secure=True,
                            httponly=True,
-                           samesite='Strict')
+                           samesite='None')
 
     return response
 

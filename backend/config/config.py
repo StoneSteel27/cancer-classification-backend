@@ -1,9 +1,10 @@
+# backend/config/config.py
 import os
 from datetime import timedelta
 
 
 class Config:
-    SECRET_KEY = os.getenv('SECRET_KEY', 'your-secret-key')
+    SECRET_KEY = os.getenv('SECRET_KEY', 'default-secret-key')
     SQLALCHEMY_DATABASE_URI = 'sqlite:///users.db'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
@@ -14,13 +15,13 @@ class Config:
     GMAIL_CREDENTIALS_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
                                           'credentials.json')
     GMAIL_TOKEN_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'token.pickle')
-    GMAIL_SENDER = "contactdrsuzane@gmail.com"  # Your Gmail address
+    GMAIL_SENDER = os.getenv('GMAIL_SENDER', 'default@example.com')
 
     # Email Verification Token Expiry (in hours)
     EMAIL_TOKEN_EXPIRY = 24
 
     # JWT Configuration
-    JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY', 'your-jwt-secret')
+    JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY', 'default-jwt-secret')
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=1)
 
     # ML Model Configuration

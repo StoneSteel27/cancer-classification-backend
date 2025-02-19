@@ -8,8 +8,6 @@ Flask-Login
 flask-cors
 pyjwt
 python-dotenv
-google-api-python-client
-google-auth-httplib2
-google-auth-oauthlib
+mailjet-rest==1.3.4
 gunicorn
 pyOpenSSL
